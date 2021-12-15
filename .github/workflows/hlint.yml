@@ -1,0 +1,13 @@
+name: HLint PR Comments
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  hlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up HLint
+        uses: rwe/actions-hlint-setup@v1.0.3
+      - name: Run HLint
+        uses: rwe/actions-hlint-run@v2.0.1
