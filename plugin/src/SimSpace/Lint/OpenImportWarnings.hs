@@ -1,7 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Plugin (plugin) where
+-- | Description: A plugin that detects open imports
+-- (equivalent to @-Wwarn-missing-import-lists@) but doesn't warn on the ones
+-- that we don't care about:
+-- * preludes
+-- * module under test
+module SimSpace.Lint.OpenImportWarnings (plugin) where
 
 import Bag
 import Data.Foldable (all, traverse_)
@@ -84,10 +89,28 @@ isOpenImport i
 warningsForImport ::
   DynFlags -> Maybe ModuleName -> LImportDecl GhcPs -> WarningMessages
 warningsForImport flags mp (L l i)
+  | maybe False (("Paths_" `T.isPrefixOf`) . moduleNameText) mp = emptyBag
   | isOpenImport i && not (isAllowedOpenImport mp (importName i)) =
     unitBag . mkPlainWarnMsg flags l $
-      "module " <> ppr (importName i) <> " is not imported qualified but is required to be"
-  | otherwise = emptyBag
+      "The module ‘" <> ppr (importName i) <> "’ does not have an explicit import list"
+  | otherwise = case ideclHiding i of
+      Just (False, L _ items) -> unionManyBags (map (warningsForImportItem flags) items)
+      Just (True, _) -> error "impossible: ruled out in previous guard"
+      Nothing -> emptyBag
+
+warningsForImportItem :: DynFlags -> LIE GhcPs -> WarningMessages
+warningsForImportItem flags (L l ie) = case ie of
+  ii@IEThingAll {} ->
+    unitBag . mkPlainWarnMsg flags l $
+      "The import item ‘" <> ppr ii <> "’ does not have an explicit import list"
+  IEVar {} -> emptyBag
+  IEThingAbs {} -> emptyBag
+  IEThingWith {} -> emptyBag
+  IEModuleContents {} -> emptyBag
+  IEGroup {} -> emptyBag
+  IEDoc {} -> emptyBag
+  IEDocNamed {} -> emptyBag
+  XIE nec -> noExtCon nec
 
 emitWarnings :: WarningMessages -> Hsc ()
 emitWarnings newMessages = Hsc $ \_env messages ->

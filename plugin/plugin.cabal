@@ -35,6 +35,6 @@ common executable-options
 
 library
   import:          options
-  exposed-modules: Plugin
+  exposed-modules: SimSpace.Lint.OpenImportWarnings
   other-modules:   Paths_plugin
   hs-source-dirs:  src
