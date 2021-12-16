@@ -7,7 +7,11 @@ jobs:
   hlint:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2.3.1
       - name: Set up HLint
         uses: rwe/actions-hlint-setup@v1.0.3
       - name: Run HLint
         uses: rwe/actions-hlint-run@v2.0.1
+        with:
+          path: .
+          fail-on: never
