@@ -35,7 +35,7 @@ common executable-options
 library
   import:          options
   exposed-modules: Lib
-  other-modules:   Paths_github_annotations_test
+  other-modules:   Paths_project
   hs-source-dirs:  src
 
 test-suite github-annotations-test-test
