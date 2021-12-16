@@ -95,7 +95,7 @@ warningsForImport flags mp (L l i)
       "The module ‘" <> ppr (importName i) <> "’ does not have an explicit import list"
   | otherwise = case ideclHiding i of
       Just (False, L _ items) -> unionManyBags (map (warningsForImportItem flags) items)
-      Just (True, _) -> error "impossible: ruled out in previous guard"
+      Just (True, _) -> error "impossible"
       Nothing -> emptyBag
 
 warningsForImportItem :: DynFlags -> LIE GhcPs -> WarningMessages
