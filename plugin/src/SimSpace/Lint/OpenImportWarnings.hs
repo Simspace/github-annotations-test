@@ -2,22 +2,33 @@
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Description: A plugin that detects open imports
--- (equivalent to @-Wwarn-missing-import-lists@) but doesn't warn on the ones
+-- (equivalent to @-Wmissing-import-lists@) but doesn't warn on the ones
 -- that we don't care about:
 -- * preludes
 -- * module under test
+--
+-- Enable this plugin by using @-fplugin=SimSpace.Lint.OpenImportWarnings@.
+--
+-- Disable this plugin locally by using @-fplugin-opt=SimSpace.Lint.OpenImportWarnings:disable@.
 module SimSpace.Lint.OpenImportWarnings (plugin) where
 
-import Bag
-import Data.Foldable (all, traverse_)
-import Data.Maybe
+import Bag (emptyBag, unionBags, unionManyBags, unitBag)
+import Control.Monad (when)
+import Data.Foldable (traverse_)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Set (Set)
 import Data.Text (Text)
-import Debug.Trace
-import ErrUtils
+import ErrUtils (WarningMessages, mkPlainWarnMsg)
 import GHC.Hs
-import GHC.Hs.Extension
+  ( IE(IEDoc, IEDocNamed, IEGroup, IEModuleContents, IEThingAbs, IEThingAll, IEThingWith, IEVar, XIE)
+  , ImportDecl(ideclHiding, ideclName, ideclQualified), GhcPs, LIE, LImportDecl, hsmodImports
+  , hsmodName, isImportDeclQualified, noExtCon
+  )
 import GhcPlugins
+  ( GenLocated(L), Hsc(Hsc), Plugin(parsedResultAction, pluginRecompile), (<>), CommandLineOption
+  , DynFlags, HsParsedModule, ModSummary, ModuleName, defaultPlugin, getDynFlags, hpm_module
+  , moduleNameString, ppr, purePlugin, unLoc
+  )
 import Prelude hiding ((<>))
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -31,11 +42,12 @@ plugin =
 
 parsed ::
   [CommandLineOption] -> ModSummary -> HsParsedModule -> Hsc HsParsedModule
-parsed _options _summary mod = do
-  let imports = getImports mod
-  flags <- getDynFlags
-  traverse_ (emitWarnings . warningsForImport flags (modName mod)) imports
-  pure mod
+parsed options _summary m = do
+  when (not ("disable" `elem` options)) $ do
+    let imports = getImports m
+    flags <- getDynFlags
+    traverse_ (emitWarnings . warningsForImport flags (modName m)) imports
+  pure m
 
 modName :: HsParsedModule -> Maybe ModuleName
 modName = fmap unLoc . hsmodName . unLoc . hpm_module
@@ -95,7 +107,7 @@ warningsForImport flags mp (L l i)
       "The module ‘" <> ppr (importName i) <> "’ does not have an explicit import list"
   | otherwise = case ideclHiding i of
       Just (False, L _ items) -> unionManyBags (map (warningsForImportItem flags) items)
-      Just (True, _) -> error "impossible"
+      Just (True, _) -> emptyBag
       Nothing -> emptyBag
 
 warningsForImportItem :: DynFlags -> LIE GhcPs -> WarningMessages
