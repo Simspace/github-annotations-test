@@ -16,4 +16,4 @@ someFunc = fmap f . fmap g $ pure "Hello world!" where
     g = id
 
 someOtherFunc :: a -> a
-someOtherFunc = id
+someOtherFunc = id $ id
