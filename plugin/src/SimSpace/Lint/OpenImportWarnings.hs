@@ -35,7 +35,7 @@ import qualified Data.Text as T
 
 plugin :: Plugin
 plugin =
-  defaultPlugin
+  id $ defaultPlugin
     { parsedResultAction = parsed,
       pluginRecompile = purePlugin
     }
