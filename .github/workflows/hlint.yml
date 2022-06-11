@@ -2,6 +2,8 @@ name: HLint PR Comments
 on:
   pull_request:
     branches: [main]
+    paths:
+      - 'plugin'
 
 jobs:
   hlint:
